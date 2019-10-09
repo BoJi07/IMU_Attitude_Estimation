@@ -22,7 +22,8 @@ public:
     void setYawOffset(float yaw_offset ){ yawOffset = yaw_offset;}
     void setPitchOffset(float pitch_offset) { pitchOffset = pitch_offset;}
     void setRollOffset(float roll_offset) { rollOffset = roll_offset;}
-
+    float getRollBias() const { return rollBias;}
+    float getPitchBias() const { return pitchBias;}
     void processMeasurement( Measurement &input, float dt);
 
 private:
@@ -41,10 +42,10 @@ private:
     float rollBias;
     float pitchBias;
 
-    float** P_roll;
-    float** P_pitch;
-    float** Q_roll;
-    float** Q_pitch;
+    float P_roll[2][2] = {{0.0,0.0},{0.0,0.0}};
+    float P_pitch[2][2] = {{0.0,0.0},{0.0,0.0}};
+    float Q_roll[2][2] = {{0.1,0.0},{0.0,0.1}};
+    float Q_pitch[2][2] = {{0.1,0.0},{0.0,0.1}};
 
     float mea_roll_noise = 0.1;
     float mea_pitch_noise = 0.1;
@@ -54,10 +55,10 @@ private:
     void predict(float dt);  // using state-space model to predict result
     void update(Measurement &input);   // update the estimated result with the measuremnt
     float computeEstYaw(Measurement &input);
-    float** matrixMutil(float** a, float** b);
-    float** transpose(float** a);
-    float** matrixPlus(float** a, float** b);
-    float** matrixMinus(float** a, float** b);
+    void matrixMutil(float a[2][2], float b[2][2], float res[2][2]);
+    void transpose(float a[2][2], float res[2][2]);
+    void matrixPlus(float a[2][2], float b[2][2], float res[2][2]);
+    void matrixMinus(float a[2][2], float b[2][2], float res[2][2]);
     void freeMemory(float** a, int row);
 };
 

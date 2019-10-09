@@ -1,38 +1,7 @@
 #include "kalmanFilter.h"
+#include <string.h>
 
 KalmanFilter::KalmanFilter(){
-    P_roll = new float*[2];
-    P_roll[0] = new float[2];
-    P_roll[1] = new float[2];
-
-    P_pitch = new float*[2];
-    P_pitch[0] = new float[2];
-    P_pitch[1] = new float[2];
-
-    Q_roll = new float*[2];
-    Q_roll[0] = new float[2];
-    Q_roll[1] = new float[2];
-
-    Q_pitch = new float*[2];
-    Q_pitch[0] = new float[2];
-    Q_pitch[1] = new float[2];
-
-    P_roll[0][0] = 0.0;
-    P_roll[0][1] = 0.0;
-    P_roll[1][0] = 0.0;
-    P_roll[1][1] = 0.0;
-    P_pitch[0][0] = 0.0;
-    P_pitch[0][1] = 0.0;
-    P_pitch[1][0] = 0.0;
-    P_pitch[1][1] = 0.0;
-    Q_roll[0][0] = 0.1;
-    Q_roll[0][1] = 0.0;
-    Q_roll[1][0] = 0.0;
-    Q_roll[1][1] = 0.1;
-    Q_pitch[0][0] = 0.1;
-    Q_pitch[0][1] = 0.0;
-    Q_pitch[1][0] = 0.0;
-    Q_pitch[1][1] = 0.1;
     rollBias = 0.0;
     pitchBias = 0.0;
     yawOffset = 0.0;
@@ -105,11 +74,9 @@ void KalmanFilter::processMeasurement(Measurement &input, float dt){
     update(input);
 }
 
-float** KalmanFilter::matrixMutil(float** a, float** b){
-    float** res = new float*[2];
+void KalmanFilter::matrixMutil(float a[2][2], float b[2][2], float res[2][2]){
     float sum = 0.0;
     for(int i = 0; i<2; i++){
-        res[i] = new float[2];
         for(int j = 0; j<2; j++){
             sum = 0.0;
             for(int k = 0; k<2; k++){
@@ -118,42 +85,32 @@ float** KalmanFilter::matrixMutil(float** a, float** b){
             res[i][j] = sum;
         }
     }
-    return res;
 }
 
-float** KalmanFilter::transpose(float** a){
-    float** res = new float*[2];
+void KalmanFilter::transpose(float a[2][2], float res[2][2]){
     for(int i = 0; i<2; i++){
-        res[i] = new float[2];
         for(int j = 0; j<2; j++){
             res[i][j] = a[j][i];
         }
     }
-    return res;
 }
 
-float** KalmanFilter::matrixPlus(float** a, float** b){
-    float** res = new float*[2];
+void KalmanFilter::matrixPlus(float a[2][2], float b[2][2], float res[2][2]){
     for(int i = 0; i<2; i++){
-        res[i] = new float[2];
         for(int j = 0; j<2; j++){
             res[i][j] = 0.0;
             res[i][j] += (a[i][j] + b[i][j]);
         }
     }
-    return res;
 }
 
-float** KalmanFilter::matrixMinus(float** a, float** b){
-    float** res = new float*[2];
+void KalmanFilter::matrixMinus(float a[2][2], float b[2][2], float res[2][2]){
     for(int i = 0; i<2; i++){
-        res[i] = new float[2];
         for(int j = 0; j<2; j++){
             res[i][j] = 0.0;
             res[i][j] += (a[i][j] - b[i][j]);
         }
     }
-    return res;
 }
 
 
@@ -163,28 +120,26 @@ void KalmanFilter::predict(float dt){
     est_pitch = est_pitch + dt*pitchBias;
     pitchBias = pitchBias;
 
-    float** F = new float*[2];
-    F[0] = new float[2];
-    F[1] = new float[2];
-
+    float F[2][2];
     F[0][0] = 1.0;
     F[0][1] = dt;
     F[1][0] = 1.0;
     F[1][1] = 0.0;
+    float temp_roll[2][2];
+    float transposeF[2][2];
+    float new_temp_roll[2][2];
+    matrixMutil(F,P_roll,temp_roll);
+    transpose(F,transposeF);
+    matrixMutil(temp_roll,transposeF,new_temp_roll);
+    matrixPlus(new_temp_roll,Q_roll,P_roll);
 
-    float** temp_roll = matrixMutil(F,P_roll);
-    float** transposeF = transpose(F);
-    temp_roll = matrixMutil(temp_roll,transposeF);
-    P_roll = matrixPlus(temp_roll,Q_roll);
+    float temp_pitch[2][2];
+    float new_temp_pitch[2][2];
 
-    float** temp_pitch = matrixMutil(F,P_pitch);
-    temp_pitch = matrixMutil(temp_pitch,transposeF);
-    P_pitch = matrixPlus(temp_pitch,Q_pitch);
+    matrixMutil(F,P_pitch,temp_pitch);
+    matrixMutil(temp_pitch,transposeF,new_temp_pitch);
+    matrixPlus(new_temp_pitch,Q_pitch,P_pitch);
 
-    freeMemory(temp_roll,2);
-    freeMemory(transposeF,2);
-    freeMemory(temp_pitch,2);
-    freeMemory(F,2);
 }
 
 void KalmanFilter::update(Measurement &input){
@@ -195,16 +150,11 @@ void KalmanFilter::update(Measurement &input){
     float s_roll = P_roll[0][0] + mea_roll_noise;
     float s_pitch = P_pitch[0][0] + mea_pitch_noise;
 
-    float** k_roll  = new float*[2];
-    k_roll[0] = new float[1];
-    k_roll[1] = new float[1];
-
+    float k_roll[2][2];
     k_roll[0][0] = P_roll[0][0]/s_roll;
     k_roll[1][0] = P_roll[1][0]/s_roll;
 
-    float** k_pitch  = new float*[2];
-    k_pitch[0] = new float[1];
-    k_pitch[1] = new float[1];
+    float k_pitch[2][2];
     k_pitch[0][0] = P_pitch[0][0]/s_pitch;
     k_pitch[1][0] = P_pitch[1][0]/s_pitch;
 
@@ -214,43 +164,36 @@ void KalmanFilter::update(Measurement &input){
     est_pitch = est_pitch + k_pitch[0][0]*err_pitch;
     pitchBias = pitchBias + k_pitch[1][0]*err_pitch;
     
-    float** identity = new float*[2];
-    identity[0] = new float[2];
-    identity[1] = new float[2];
-    identity[0][0] = 1.0;
-    identity[0][1] = 0.0;
-    identity[1][0] = 0.0;
-    identity[1][1] = 1.0;
+    float identity[2][2] = {{1.0,0.0},{0.0,1.0}};
 
-    float** temp_roll = new float*[2];
-    temp_roll[0] = new float[2];
-    temp_roll[1] = new float[2];
+    float temp_roll[2][2];
     temp_roll[0][0] = k_roll[0][0];
     temp_roll[1][0] = k_roll[1][0];
     temp_roll[0][1] = 0.0;
     temp_roll[1][1] = 0.0;
 
-    temp_roll = matrixMinus(identity,temp_roll);
-    P_roll = matrixMutil(temp_roll,P_roll);
+    float new_temp_roll[2][2];
+    matrixMinus(identity,temp_roll,new_temp_roll);
+    float res[2][2];
+    matrixMutil(new_temp_roll,P_roll,res);
+    for(int i = 0; i<2; i++){
+        memcpy(&P_roll[i],&res[i], sizeof(res[i]));
+    }
     
-    float** temp_pitch = new float*[2];
-    temp_pitch[0] = new float[2];
-    temp_pitch[1] = new float[2];
+    float temp_pitch[2][2];
     temp_pitch[0][0] = k_pitch[0][0];
     temp_pitch[1][0] = k_pitch[1][0];
     temp_pitch[0][1] = 0.0;
     temp_pitch[1][1] = 0.0;
 
-
-    temp_pitch = matrixMinus(identity,temp_pitch);
-    P_pitch = matrixMutil(temp_pitch,P_pitch);
-
+    float new_temp_pitch[2][2];
+    matrixMinus(identity,temp_pitch,new_temp_pitch);
+    matrixMutil(new_temp_pitch,P_pitch,res);
+    for(int i = 0; i<2; i++){
+        memcpy(&P_pitch[i],&res[i], sizeof(res[i]));
+    }
     computeEstYaw(input);
-    freeMemory(identity,2);
-    freeMemory(temp_pitch,2);
-    freeMemory(temp_roll,2);
-    freeMemory(k_pitch,2);
-    freeMemory(k_roll,2);
+  
     
 }
 

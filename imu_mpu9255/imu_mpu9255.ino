@@ -1,8 +1,5 @@
 #include <kalmanFilter.h>
 #include <measurement.h>
-#include <measurement.h>
-
-
 
 #include <MPU9255.h>// include MPU9255 library
 
@@ -15,6 +12,7 @@ float roll_offset = 0.0;
 float pitch_offset = 0.0;
 float yaw_offset = 0.0;
 KalmanFilter kf;
+
 unsigned long starttime = millis();
 
 MPU9255 mpu;
@@ -159,6 +157,7 @@ void loop() {
   float mz = process_magnetic_flux(mpu.mz,mpu.mz_sensitivity);
 
   Measurement input(ax,ay,az,gx,gy,gz,mx,my,mz);
+
   
   if(!offset_check){
      for(int i = 0; i<100; i++){
@@ -182,20 +181,20 @@ void loop() {
   float yaw = kf.readYaw();
   float pitch = kf.readPitch();
   float roll = kf.readRoll();
+  float rollBias = kf.getRollBias();
+  float pitchBias = kf.getPitchBias();
   Serial.print("time difference: ");
   Serial.print(dt);
-  Serial.print(" roll offset: ");
-  Serial.print(roll_offset);
-  Serial.print(" pitch offset: ");
-  Serial.print(pitch_offset);
-  Serial.print(" yaw offset: ");
-  Serial.print(yaw_offset);
   Serial.print(" roll: ");
   Serial.print(roll);
   Serial.print(" pitch: ");
   Serial.print(pitch);
   Serial.print(" yaw: ");
   Serial.print(yaw);
+  Serial.print(" rollBias: ");
+  Serial.print(rollBias);
+  Serial.print(" pitchBias: ");
+  Serial.print(pitchBias);
   Serial.println();
 
   /*
@@ -238,5 +237,5 @@ void loop() {
   Serial.print("  MZ: ");
   Serial.println(process_magnetic_flux(mpu.mz,mpu.mz_sensitivity));
 */
-  delay(1000);
+  delay(100);
 }
